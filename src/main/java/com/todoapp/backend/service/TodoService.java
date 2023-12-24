@@ -1,15 +1,15 @@
 package com.todoapp.backend.service;
 
-import com.todoapp.backend.repo.TodoRepository;
+import com.todoapp.backend.repo.TodoRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TodoService {
-    private final TodoRepository todoRepository;
+    private final TodoRepo todoRepo;
 
     @Autowired
-    public TodoService(TodoRepository todoRepository) {
-        this.todoRepository = todoRepository;
+    public TodoService(TodoRepo todoRepo) {
+        this.todoRepo = todoRepo;
     }
 }
