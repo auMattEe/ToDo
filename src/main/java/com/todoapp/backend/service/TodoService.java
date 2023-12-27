@@ -1,47 +1,70 @@
 package com.todoapp.backend.service;
 
-import com.todoapp.backend.constants.Constants;
+import com.todoapp.backend.constants.ErrorMessages;
+import com.todoapp.backend.dto.TodoDTO;
 import com.todoapp.backend.entity.Todo;
 import com.todoapp.backend.exception.ResourceNotFoundException;
+import com.todoapp.backend.factory.TodoFactory;
 import com.todoapp.backend.repo.TodoRepo;
-import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Optional;
-
+@Slf4j
 @Service
 @Transactional
-@AllArgsConstructor
 public class TodoService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TodoService.class);
     private final TodoRepo todoRepo;
+    private final TodoFactory todoFactory;
 
-    public List<Todo> findAll() {
-        return todoRepo.findAll();
+    @Autowired
+    public TodoService(TodoRepo todoRepo, TodoFactory todoFactory) {
+        this.todoRepo = todoRepo;
+        this.todoFactory = todoFactory;
     }
 
-    public Todo save(Todo todo) {
-        return todoRepo.save(todo);
+    public Page<TodoDTO> findAll(Pageable pageable) {
+        Page<Todo> todos = todoRepo.findAll(pageable);
+        return todos.map(todoFactory::convertToDTO);
     }
 
-    public Optional<Todo> findById(Long id) {
-        return todoRepo.findById(id);
+    public TodoDTO save(TodoDTO todoDTO) {
+        logger.info("Attempting to save TODO: {}", todoDTO);
+        Todo todo = todoFactory.convertToEntity(todoDTO);
+        Todo savedTodo = todoRepo.save(todo);
+        logger.info("Successfully saved TODO: {}", savedTodo);
+        return todoFactory.convertToDTO(savedTodo);
     }
 
-    public Todo update(Long id, Todo todoDetails) {
+    public TodoDTO findById(Long id) {
         Todo todo = todoRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(Constants.TODO_NOT_FOUND + id));
-        todo.setTitle(todoDetails.getTitle());
-        todo.setDescription(todoDetails.getDescription());
-        todo.setCompleted(todoDetails.isCompleted());
-        return todoRepo.save(todo);
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.TODO_NOT_FOUND + id));
+        return todoFactory.convertToDTO(todo);
+    }
+
+    public TodoDTO update(Long id, TodoDTO todoDTO) {
+        Todo existingTodo = todoRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Todo not found"));
+        existingTodo.setTitle(todoDTO.getTitle());
+        existingTodo.setDescription(todoDTO.getDescription());
+        existingTodo.setCompleted(todoDTO.isCompleted());
+        Todo updatedTodo = todoRepo.save(existingTodo);
+        return todoFactory.convertToDTO(updatedTodo);
     }
 
     public void delete(Long id) {
         Todo todo = todoRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(Constants.TODO_NOT_FOUND + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Todo not found"));
+
+        log.info("Deleting todo with id {}", id);  //Adding log
+
         todoRepo.delete(todo);
     }
 }
